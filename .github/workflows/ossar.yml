@@ -1,0 +1,28 @@
+name: OSSAR
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '27 4 * * 1'
+permissions:
+  contents: read
+jobs:
+  OSSAR-Scan:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run OSSAR
+        uses: github/ossar-action@v1
+        id: ossar
+      - name: Upload OSSAR results
+        if: ${{ steps.ossar.outputs.sarifFile != '' }}
+        uses: github/codeql-action/upload-sarif@9f759ee644a3e7c15c1390abf49868036c00067b # v3
+        with:
+          sarif_file: ${{ steps.ossar.outputs.sarifFile }}

@@ -1,0 +1,49 @@
+# Zimperium zScan mobile binary scanning.
+name: "Zimperium zScan"
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+permissions:
+  contents: read
+jobs:
+  zscan:
+    name: zScan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Execute Gradle build
+        if: ${{ hashFiles('gradlew') != '' }}
+        run: ./gradlew build
+      - name: Check zScan configuration
+        id: config
+        shell: bash
+        env:
+          ZSCAN_SECRET: ${{ secrets.ZSCAN_CLIENT_SECRET }}
+        run: |
+          if [[ -n "$ZSCAN_SECRET" ]] && find . -type f -name '*.apk' -print -quit | grep -q .; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping zScan: an APK artifact and ZSCAN_CLIENT_SECRET are required."
+          fi
+      - name: Run Zimperium zScan
+        if: ${{ steps.config.outputs.configured == 'true' }}
+        uses: zimperium/zscanmarketplace@bfc6670f6648d796098c251ccefcfdb98983174d
+        timeout-minutes: 60
+        with:
+          client_env: ${{ vars.ZSCAN_CLIENT_ENV }}
+          client_id: ${{ vars.ZSCAN_CLIENT_ID }}
+          client_secret: ${{ secrets.ZSCAN_CLIENT_SECRET }}
+          app_file: ${{ vars.ZSCAN_APP_FILE }}
+      - name: Upload SARIF file
+        if: ${{ hashFiles('Zimperium.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@9f759ee644a3e7c15c1390abf49868036c00067b # v3
+        with:
+          sarif_file: Zimperium.sarif
