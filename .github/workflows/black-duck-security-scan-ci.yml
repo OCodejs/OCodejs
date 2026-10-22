@@ -1,0 +1,53 @@
+# This workflow uses a third-party security scanning action.
+name: CI Black Duck security scan
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '31 13 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check Black Duck configuration
+        id: config
+        shell: bash
+        env:
+          BLACKDUCK_URL: ${{ vars.BLACKDUCKSCA_URL }}
+          BLACKDUCK_TOKEN: ${{ secrets.BLACKDUCKSCA_TOKEN }}
+        run: |
+          if [[ -n "$BLACKDUCK_URL" && -n "$BLACKDUCK_TOKEN" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping Black Duck scan: BLACKDUCKSCA_URL variable and BLACKDUCKSCA_TOKEN secret are required."
+          fi
+      - name: Black Duck SCA scan
+        if: ${{ steps.config.outputs.configured == 'true' }}
+        uses: blackduck-inc/black-duck-security-scan@805cbd09e806b01907bbea0f990723c2bb85abe9
+        with:
+          blackducksca_url: ${{ vars.BLACKDUCKSCA_URL }}
+          blackducksca_token: ${{ secrets.BLACKDUCKSCA_TOKEN }}
+          coverity_url: ${{ vars.COVERITY_URL }}
+          coverity_user: ${{ secrets.COVERITY_USER }}
+          coverity_passphrase: ${{ secrets.COVERITY_PASSPHRASE }}
+          polaris_server_url: ${{ vars.POLARIS_SERVER_URL }}
+          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
+          polaris_assessment_types: "SCA,SAST"
+          srm_url: ${{ vars.SRM_URL }}
+          srm_apikey: ${{ secrets.SRM_API_KEY }}
+          srm_assessment_types: "SCA,SAST"
