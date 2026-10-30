@@ -1,4 +1,4 @@
 [build]
-  # The website is static HTML; the npm build produces the utility library.
-  command = ""
-  publish = "."
+  # Stage the static website; the npm build produces the utility library.
+  command = "node scripts/prepare-site.mjs"
+  publish = "_site"
