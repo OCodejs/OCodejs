@@ -1,0 +1,4 @@
+[build]
+  # The website is static HTML; the npm build produces the utility library.
+  command = ""
+  publish = "."
